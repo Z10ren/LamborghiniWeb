@@ -37,3 +37,5 @@ export const FINISH_LABELS = { solid: 'Solid', metallic: 'Metallic', pearl: 'Pea
 # Automated touch for Day 3: 2026-10-03T10:00:00
 
 # Automated touch for Day 4: 2026-10-04T10:00:00
+
+# Automated touch for Day 5: 2026-10-05T10:00:00
