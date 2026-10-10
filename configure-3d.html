@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>AURELION · Aventador Configurator (3D)</title>
-  <meta name="description" content="AURELION, an unofficial student project: build an Aventador LP 700-4 part by part in 3D.">
+  <meta name="description" content="AURELION: build an Aventador LP 700-4 part by part in 3D.">
   <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/brand/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="assets/brand/apple-touch-icon.png">
@@ -27,7 +27,6 @@
   <header class="topbar">
     <a class="back-link" href="index.html" aria-label="Back to the AURELION home page"><span aria-hidden="true">←</span><img class="topbar-logo" src="assets/brand/aurelion-logo.svg" width="1485" height="126" alt=""></a>
     <p class="topbar-title"><span class="display">LP 700-4</span> <span class="topbar-sub">Configurator</span></p>
-    <span class="badge" title="AURELION is not affiliated with Automobili Lamborghini S.p.A."><span class="badge-long">Unofficial student project</span><span class="badge-short" aria-hidden="true">Unofficial</span></span>
   </header>
 
   <main class="layout">
@@ -75,26 +74,15 @@
 
   <p class="toast" id="toast" role="status" hidden></p>
   <div id="announcer" class="sr-only" aria-live="polite"></div>
+  <script>
+    if (location.protocol === 'file:') {
+      document.getElementById('stage-status').dataset.kind = 'error';
+      document.getElementById('load-label').textContent = 'Open this page from a web server';
+      const track = document.getElementById('load-bar').parentElement;
+      track.hidden = true;
+      track.insertAdjacentHTML('afterend', '<p>Browsers block the configurator when the file is opened straight from a folder. Run <b>python3 -m http.server</b> in the project folder, then go to localhost:8000.</p>');
+    }
+  </script>
   <script type="module" src="js/configurator/main.js"></script>
 </body>
 </html>
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

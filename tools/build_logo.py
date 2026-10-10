@@ -1,15 +1,6 @@
-"""Builds the AURELION logo files from the team's original logo image.
+"""Builds the AURELION logo files in assets/brand from the original logo image.
 
-The original (assets/brand/source/aurelion-logo-original.jpg) is a 1536x142 JPEG on white. This script traces
-its letters into vector shapes, so the logo stays sharp at any size, and gives them a polished-gold finish
-(gradient + bevel lighting) close to the original. Outputs in assets/brand/:
-
-  aurelion-logo.svg       the logo used on the site (vector)
-  aurelion-logo.png       2400 px wide, transparent background, for slides and documents
-  favicon.svg             the "A" in gold on a dark tile (browser tab icon)
-  favicon-32.png, apple-touch-icon.png   the same icon as PNG for browsers that don't use SVG icons
-
-Usage (from the project folder):  pip install opencv-python numpy playwright && python tools/build_logo.py
+Usage: python tools/build_logo.py
 """
 import os, re
 import cv2
@@ -19,17 +10,16 @@ from playwright.sync_api import sync_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAND = os.path.join(ROOT, 'assets', 'brand')
 SOURCE = os.path.join(BRAND, 'source', 'aurelion-logo-original.jpg')
-S = 8            # trace at 8x for smooth edges
+S = 8
 
 GOLD_STOPS = [(0, '#ffe697'), (.13, '#f1c34b'), (.34, '#cc8f1d'), (.50, '#7f4c07'), (.62, '#ad7416'),
               (.78, '#ecc455'), (.90, '#d49d2e'), (1, '#7e4b08')]
 
 
 def trace():
-    """Letter outlines (with the O's counter) in the original image's pixel coordinates, left to right."""
     src = cv2.imread(SOURCE)
     h, w = src.shape[:2]
-    ink = np.clip((255 - src[:, :, 0].astype(np.float32)) / 150.0, 0, 1)   # the blue channel separates gold from white
+    ink = np.clip((255 - src[:, :, 0].astype(np.float32)) / 150.0, 0, 1)
     big = cv2.GaussianBlur(cv2.resize(ink, (w * S, h * S), interpolation=cv2.INTER_CUBIC), (0, 0), S * 0.55)
     mask = (big > 0.5).astype(np.uint8) * 255
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (S * 2 + 1, S * 2 + 1)))
@@ -38,11 +28,11 @@ def trace():
     ring = lambda c: 'M' + ' L'.join(f'{x:.2f} {y:.2f}' for x, y in cv2.approxPolyDP(c, 0.3 * S, True).reshape(-1, 2) / S) + 'Z'
     letters = []
     for i, c in enumerate(contours):
-        if hier[i][3] != -1 or cv2.contourArea(c) / S / S < 60:      # holes are added to their letter; specks dropped
+        if hier[i][3] != -1 or cv2.contourArea(c) / S / S < 60:
             continue
         rings, k = [c], hier[i][2]
         while k != -1:
-            if cv2.contourArea(contours[k]) / S / S > 300:            # real counters only (the O)
+            if cv2.contourArea(contours[k]) / S / S > 300:
                 rings.append(contours[k])
             k = hier[k][0]
         x, y, bw, bh = cv2.boundingRect(c)
@@ -64,14 +54,12 @@ def logo_svg(letters):
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb[0]} {vb[1]} {vb[2]} {vb[3]}" width="{vb[2]}" height="{vb[3]}" role="img" aria-labelledby="t">
   <title id="t">AURELION</title>
   <defs>
-    <!-- polished gold: bright top edge, a darker band through the middle, a warm reflection near the bottom -->
     {gold_gradient('gold', y0, y1)}
     <linearGradient id="sheen" gradientUnits="userSpaceOnUse" x1="{x0:.0f}" y1="0" x2="{x1:.0f}" y2="0">
       <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".3" stop-color="#fff" stop-opacity=".16"/>
       <stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset=".72" stop-color="#fff" stop-opacity=".12"/>
       <stop offset="1" stop-color="#fff" stop-opacity="0"/>
     </linearGradient>
-    <!-- bevel: light from the top left catches the edges of each stroke -->
     <filter id="bevel" x="-2%" y="-10%" width="104%" height="120%" color-interpolation-filters="sRGB">
       <feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blur"/>
       <feSpecularLighting in="blur" surfaceScale="3" specularConstant="1.5" specularExponent="38" lighting-color="#fff6d8" result="spec">
@@ -92,7 +80,7 @@ def logo_svg(letters):
 
 
 def favicon_svg(letters):
-    (ax0, ay0, ax1, ay1), a_path = letters[0]                     # the "A"
+    (ax0, ay0, ax1, ay1), a_path = letters[0]
     size = max(ax1 - ax0, ay1 - ay0) * 1.32
     cx, cy = (ax0 + ax1) / 2, (ay0 + ay1) / 2 + (ay1 - ay0) * 0.04
     vx, vy = cx - size / 2, cy - size / 2
@@ -135,23 +123,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

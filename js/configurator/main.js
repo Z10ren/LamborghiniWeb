@@ -2,9 +2,8 @@ if (new URLSearchParams(location.search).has('stills')) document.documentElement
 import { createState } from './state.js';
 import { createUI, STEPS } from './ui.js';
 
-// configure.html shows pre-rendered pictures (fast, works everywhere); configure-3d.html loads the real-time 3D model.
 const MODE = document.querySelector('meta[name="stage"]')?.content === '3d' ? '3d' : 'image';
-// The 3D page names the model file; the artifact copy points at a base64 text version because that host doesn't serve .glb.
+
 const MODEL_URL = document.querySelector('meta[name="model-src"]')?.content || 'assets/models/aventador-lp700-4.glb';
 const statusEl = document.getElementById('stage-status');
 const stage = document.getElementById('stage');
@@ -29,9 +28,9 @@ const initialStep = STEPS.find((s) => s.id === hash)?.id;
 let viewer = null;
 const ready = { value: false };
 
-const writeHash = (token) => { try { history.replaceState(null, '', `#${token}`); } catch { /* sandboxed frames may refuse */ } };
+const writeHash = (token) => { try { history.replaceState(null, '', `#${token}`); } catch {} };
 
-// ---------- Apply state to the stage (3D model or pictures) ----------
+// Apply state to the stage
 const apply = {
   paint: (o, opts) => viewer?.setPaint(o, opts),
   wheels: (o, opts) => viewer?.setWheelFinish(o, opts),
@@ -76,9 +75,9 @@ state.subscribe((evt) => {
   syncViewButtons();
 });
 
-// ---------- Actions used by the panel ----------
+// Actions used by the panel
 const summaryText = () => [
-  'AURELION · Aventador LP 700-4 build (unofficial student configurator)',
+  'AURELION · Aventador LP 700-4 build',
   ...state.summaryLines(),
   ...catalog.previews.included.map((i) => `Included: ${i.name}`),
 ].join('\n');
@@ -117,7 +116,7 @@ const actions = {
     a.click();
   },
   requestBuild() {
-    try { sessionStorage.setItem('aventador.build', JSON.stringify({ code: state.encode(), lines: state.summaryLines() })); } catch { /* storage blocked: booking opens without the build */ }
+    try { sessionStorage.setItem('aventador.build', JSON.stringify({ code: state.encode(), lines: state.summaryLines() })); } catch {}
     location.href = 'index.html#reserve';
   },
   reset() {
@@ -141,7 +140,6 @@ function flash(text) {
 
 const ui = createUI({ catalog, state, actions, mode: MODE });
 
-// Camera view buttons on the stage
 document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => goToView(b.dataset.view)));
 document.querySelectorAll('[data-step-view]').forEach((b) => b.addEventListener('click', () => viewer?.step(Number(b.dataset.stepView))));
 document.querySelectorAll('.stage-toggles [data-preview]').forEach((b) => b.addEventListener('click', () => actions.togglePreview(b.dataset.preview)));
@@ -150,12 +148,11 @@ function syncViewButtons() {
   document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(viewer?.currentView === b.dataset.view)));
 }
 
-// Keep the 3D/picture links pointing at the same build.
 const syncModeLink = () => document.querySelectorAll('[data-keep-build]').forEach((a) => { a.hash = state.encode(); });
 state.subscribe(syncModeLink);
 syncModeLink();
 
-// ---------- Boot the picture stage ----------
+// Boot the picture stage
 async function bootImages() {
   const bar = document.getElementById('load-bar');
   const label = document.getElementById('load-label');
@@ -175,7 +172,7 @@ async function bootImages() {
     showStatus('<p class="status-title">The car pictures didn’t load.</p><p>Check your connection, then reload the page.</p>', 'error');
     return;
   }
-  // Swipes and arrow keys ask for a view; preview toggles follow the view (cabin = doors open, night = lights on).
+
   viewer.addEventListener('request-view', (e) => goToView(e.detail));
   viewer.addEventListener('viewchange', (e) => {
     const v = e.detail;
@@ -200,13 +197,13 @@ async function bootImages() {
 function goToView(view) {
   if (!viewer || !ready.value) return;
   if (view === 'cabin' && !state.preview.doors) {
-    state.setPreview('doors', true);              // pictures: switching doors on shows the cabin
+    state.setPreview('doors', true);
     if (MODE === '3d') viewer.goTo('cabin');
   } else viewer.goTo(view);
   syncViewButtons();
 }
 
-// ---------- Boot the 3D stage ----------
+// Boot the 3D stage
 async function boot() {
   if (MODE === 'image') return bootImages();
   const { CarViewer, webglAvailable } = await import('./viewer.js');
@@ -235,7 +232,7 @@ async function boot() {
     showStatus('<p class="status-title">The 3D model didn’t load.</p><p>Check your connection, then reload the page.</p>', 'error');
     return;
   }
-  // Apply the build instantly, then reveal with one orchestrated camera move.
+
   for (const g of state.groups) apply[g.id]?.(state.option(g.id), { duration: 0 });
   viewer.addEventListener('interact', syncViewButtons);
   const origGoTo = viewer.goTo.bind(viewer);
@@ -258,30 +255,9 @@ window.addEventListener('hashchange', () => {
   if (next) for (const [k, v] of Object.entries(next)) state.set(k, v, { source: 'hash' });
 });
 
-// Automation hook for tools/render_stills.py and tools/check_isolation.py (not used by the page itself).
 window.__configurator = {
   state, actions,
   get viewer() { return viewer; },
   get ready() { return ready.value; },
   setBuild(build) { for (const [k, v] of Object.entries(build)) state.set(k, v, { source: 'script', instant: true, silent: true }); },
 };
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

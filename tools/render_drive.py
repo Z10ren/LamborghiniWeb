@@ -1,31 +1,13 @@
-"""Renders the hero "test drive" video from the 3D model: a run through a lit road tunnel.
+"""Renders the hero test-drive video from the 3D model (needs ffmpeg).
 
-The car stays put while the world moves past it (road markings, wall lights, their reflections in the
-paint), the wheels turn at road speed and the camera tracks alongside. Each frame is built from three
-passes so the slow software renderer only shades the car a few times per frame:
-
-  A. the tunnel alone, 12 sub-frames (cheap, unlit materials) -> smooth motion blur on the walls and road
-  B. the car with the rims hidden, 2 sub-frames, environment lighting from the passing lamps
-  C. the rims alone (the rest of the car as an invisible depth mask), 8 sub-frames -> blurred spinning spokes
-
-C is composited over B, and that over A. The clip loops seamlessly: 8 s at 24 m/s is 192 m, which is a whole
-number of lamp spacings (4 m), road-marking tiles (16 m) and fifths of a wheel turn (five-spoke rim).
-
-Output: assets/video/test-drive-1280.mp4 (H.264), test-drive-1280-av1.mp4, test-drive-854.mp4 and the poster stills
-
-Usage (from the project folder):
-    pip install playwright pillow && python -m playwright install chromium   # plus ffmpeg on the PATH
-    python tools/render_drive.py              # full clip (about 40 minutes in software rendering)
-    python tools/render_drive.py --test 3     # only the first 3 frames, for checking the look
-    python tools/render_drive.py --from 120   # resume after an interruption
-    python tools/render_drive.py --encode     # only re-encode the video files from the saved frames
+Usage: python tools/render_drive.py [--test N] [--from N] [--encode]
 """
 import base64, os, subprocess, sys, time
 
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FRAMES = os.path.join(ROOT, 'tools', '.drive-frames')     # temporary, not published
+FRAMES = os.path.join(ROOT, 'tools', '.drive-frames')
 OUT = os.path.join(ROOT, 'assets', 'video')
 PORT = 8793
 W, H = 1280, 720
@@ -37,17 +19,17 @@ async ({ fps, seconds, sub }) => {
   const THREE = await import('./vendor/three/build/three.module.js');
   const C = window.__configurator, v = C.viewer, r = v.renderer, scene = v.scene;
   C.setBuild({ paint: 'giallo-evros', wheels: 'silver', calipers: 'black', interior: 'nero-ade', lift: 'fitted' });
-  C.state.setPreview('lights', true);                     // headlights, DRLs and tail lights on
-  await new Promise((res) => setTimeout(res, 1600));      // let the lights tween finish
+  C.state.setPreview('lights', true);
+  await new Promise((res) => setTimeout(res, 1600));
   v.controls.enabled = false;
   v.floor.visible = false;
-  v.spots.forEach((s) => { s.visible = false; });         // the road pass draws its own headlight pool
+  v.spots.forEach((s) => { s.visible = false; });
   const carObjs = scene.children.filter((o) => o !== v.floor && !v.spots.includes(o) && !o.isLight);
 
-  const SPEED = 24, P = 4;                                 // m/s; lamp spacing in metres
-  const WHEEL_REVS = 91.4;                                 // per loop: 192 m / ~2.1 m tyre circumference, a multiple of 1/5
-  const X0 = -3.2, X1 = 7.1, TOP = 5.3;                    // tunnel walls and ceiling
-  const Z0 = -152, Z1 = 40, LEN = Z1 - Z0;                 // tunnel section that is drawn (multiple of 16 m)
+  const SPEED = 24, P = 4;
+  const WHEEL_REVS = 91.4;
+  const X0 = -3.2, X1 = 7.1, TOP = 5.3;
+  const Z0 = -152, Z1 = 40, LEN = Z1 - Z0;
   const LAMP_Y = 3.45, LIGHT = new THREE.Color(1, 0.96, 0.9);
   const BG = 0x060608;
 
@@ -68,15 +50,15 @@ async ({ fps, seconds, sub }) => {
     g.fillStyle = gr; g.fillRect(-100, -100, 200, 200); g.restore();
   };
 
-  // ---- Main scene: the tunnel (unlit, light baked into the textures) ----
+  // Main scene
   const tunnel = new THREE.Group(); scene.add(tunnel);
   const roadW = X1 - X0;
   const roadTex = canvasTex(1024, 1024, (g, w, h) => {
-    const X = (x) => (x - X0) / roadW * w, Y = (m) => m / 16 * h;          // 16 m of road per tile
+    const X = (x) => (x - X0) / roadW * w, Y = (m) => m / 16 * h;
     g.fillStyle = '#151518'; g.fillRect(0, 0, w, h);
     noise(g, w, h, 14);
     g.globalCompositeOperation = 'lighter';
-    for (const zc of [2, 6, 10, 14]) {                                       // light pools under the wall lamps
+    for (const zc of [2, 6, 10, 14]) {
       glow(g, X(X0 + 0.9), Y(zc), 250, 170, [[0, 'rgba(255,246,232,0.28)'], [1, 'rgba(255,246,232,0)']]);
       glow(g, X(X1 - 0.9), Y(zc), 250, 170, [[0, 'rgba(255,246,232,0.28)'], [1, 'rgba(255,246,232,0)']]);
       glow(g, X(1.95), Y(zc), 560, 230, [[0, 'rgba(255,246,232,0.10)'], [1, 'rgba(255,246,232,0)']]);
@@ -84,28 +66,28 @@ async ({ fps, seconds, sub }) => {
     g.globalCompositeOperation = 'source-over';
     g.fillStyle = 'rgba(226,224,214,0.85)';
     const lw = 0.15 / roadW * w;
-    g.fillRect(X(-1.95) - lw / 2, 0, lw, h);                                 // solid edge lines
+    g.fillRect(X(-1.95) - lw / 2, 0, lw, h);
     g.fillRect(X(5.85) - lw / 2, 0, lw, h);
-    for (const z0 of [0, 8]) g.fillRect(X(1.95) - lw / 2, Y(z0), lw, Y(3));  // dashed lane line: 3 m on, 5 m off
-    g.fillStyle = '#18181b'; g.fillRect(0, 0, X(-2.6), h); g.fillRect(X(6.5), 0, w - X(6.5), h);   // kerbs
+    for (const z0 of [0, 8]) g.fillRect(X(1.95) - lw / 2, Y(z0), lw, Y(3));
+    g.fillStyle = '#18181b'; g.fillRect(0, 0, X(-2.6), h); g.fillRect(X(6.5), 0, w - X(6.5), h);
   });
   roadTex.wrapS = THREE.ClampToEdgeWrapping; roadTex.wrapT = THREE.RepeatWrapping; roadTex.repeat.set(1, LEN / 16);
   const road = new THREE.Mesh(new THREE.PlaneGeometry(roadW, LEN), new THREE.MeshBasicMaterial({ map: roadTex }));
   road.rotation.x = -Math.PI / 2; road.position.set((X0 + X1) / 2, -0.004, (Z0 + Z1) / 2);
   tunnel.add(road);
 
-  const wallTex = canvasTex(512, 672, (g, w, h) => {                          // one lamp spacing (4 m) x 5.25 m
+  const wallTex = canvasTex(512, 672, (g, w, h) => {
     const Y = (m) => h - m / 5.25 * h, Xm = (m) => m / 4 * w;
     g.fillStyle = '#0c0c0e'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#2c2e32'; g.fillRect(0, Y(3.2), w, Y(0.85) - Y(3.2));   // light wall cladding
+    g.fillStyle = '#2c2e32'; g.fillRect(0, Y(3.2), w, Y(0.85) - Y(3.2));
     noise(g, w, h, 8);
-    g.fillStyle = '#1e1f23'; g.fillRect(0, Y(0.85), w, h - Y(0.85));        // safety barrier
+    g.fillStyle = '#1e1f23'; g.fillRect(0, Y(0.85), w, h - Y(0.85));
     g.fillStyle = '#3a3b40'; g.fillRect(0, Y(0.85) - 3, w, 4);
-    g.fillStyle = 'rgba(10,10,12,0.55)';                                     // soft panel joints
+    g.fillStyle = 'rgba(10,10,12,0.55)';
     for (const x of [0, 2]) g.fillRect(Xm(x) - 2, Y(3.2), 4, Y(0.85) - Y(3.2));
     g.fillRect(0, Y(2.05) - 1, w, 3);
     g.globalCompositeOperation = 'lighter';
-    for (const dx of [-4, 0, 4]) {                                           // wash of light below each lamp
+    for (const dx of [-4, 0, 4]) {
       glow(g, Xm(2 + dx), Y(LAMP_Y - 0.25), 300, 380, [[0, 'rgba(255,246,230,0.40)'], [0.45, 'rgba(255,246,230,0.14)'], [1, 'rgba(255,246,230,0)']]);
       glow(g, Xm(2 + dx), Y(LAMP_Y), 120, 40, [[0, 'rgba(255,250,240,0.45)'], [1, 'rgba(255,250,240,0)']]);
     }
@@ -121,7 +103,6 @@ async ({ fps, seconds, sub }) => {
   ceil.rotation.x = Math.PI / 2; ceil.position.set((X0 + X1) / 2, TOP, (Z0 + Z1) / 2);
   tunnel.add(wallL, wallR, ceil);
 
-  // Lamp fixtures and LED guide lights move with the wall texture; one per lamp spacing at z = 2 (mod 4).
   const lampMat = new THREE.MeshBasicMaterial({ color: LIGHT.clone().multiplyScalar(6) });
   const ledMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.9, 2.4) });
   const fixtures = new THREE.Group(); tunnel.add(fixtures);
@@ -132,7 +113,7 @@ async ({ fps, seconds, sub }) => {
       for (const dz of [0, 2]) { const led = new THREE.Mesh(ledGeo, ledMat); led.position.set(x, 0.95, z + dz); fixtures.add(led); }
     }
   }
-  // An emergency niche every 48 m on the left wall: a small green-lit box.
+
   const niches = new THREE.Group(); tunnel.add(niches);
   const nicheTex = canvasTex(256, 256, (g, w, h) => glow(g, 128, 128, 128, 128, [[0, 'rgba(70,255,170,0.6)'], [0.25, 'rgba(40,220,140,0.22)'], [1, 'rgba(20,200,120,0)']]));
   for (let z = Z0; z < Z1 + 48; z += 48) {
@@ -141,11 +122,11 @@ async ({ fps, seconds, sub }) => {
     const halo = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.0), new THREE.MeshBasicMaterial({ map: nicheTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     halo.rotation.y = Math.PI / 2; halo.position.set(X0 + 0.02, 1.65, z); niches.add(halo);
   }
-  // Headlight pool on the road ahead of the car (this pass has no lights; the pool is painted on).
+
   const fz = v.spots[0].position.z;
   const beamTex = canvasTex(256, 512, (g, w, h) => {
     for (const x of [0.32, 0.68]) glow(g, x * w, h * 0.16, 0.2 * w, 0.8 * h, [[0, 'rgba(240,244,255,0.24)'], [0.45, 'rgba(240,244,255,0.09)'], [1, 'rgba(240,244,255,0)']]);
-    g.globalCompositeOperation = 'destination-in';                                 // fade every edge to nothing
+    g.globalCompositeOperation = 'destination-in';
     const gx = g.createLinearGradient(0, 0, w, 0); gx.addColorStop(0, 'rgba(0,0,0,0)'); gx.addColorStop(0.25, '#000'); gx.addColorStop(0.75, '#000'); gx.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = gx; g.fillRect(0, 0, w, h);
     const gy = g.createLinearGradient(0, 0, 0, h); gy.addColorStop(0, 'rgba(0,0,0,0)'); gy.addColorStop(0.06, '#000'); gy.addColorStop(0.6, '#000'); gy.addColorStop(1, 'rgba(0,0,0,0)');
@@ -156,7 +137,7 @@ async ({ fps, seconds, sub }) => {
   scene.fog = new THREE.Fog(BG, 30, 120);
   const bgColor = new THREE.Color(BG);
 
-  // ---- Reflections and car lighting: the same tunnel as HDR light sources, cached per lamp phase ----
+  // Reflections and car lighting
   const env = new THREE.Scene();
   const box = new THREE.Mesh(new THREE.BoxGeometry(roadW, TOP, 300), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.012, 0.012, 0.013), side: THREE.BackSide }));
   box.position.set((X0 + X1) / 2, TOP / 2, 0); env.add(box);
@@ -182,7 +163,7 @@ async ({ fps, seconds, sub }) => {
   };
   scene.environmentIntensity = 1.55;
 
-  // ---- Car parts for the passes ----
+  // Car parts for the passes
   const meshes = []; carObjs.forEach((o) => o.traverse((m) => { if (m.isMesh) meshes.push(m); }));
   const orig = new Map(meshes.map((m) => [m, [m.material, m.visible, m.renderOrder]]));
   const rims = meshes.filter((m) => m.material.name === 'wheel_rim');
@@ -202,7 +183,7 @@ async ({ fps, seconds, sub }) => {
     }
   };
 
-  // ---- Motion ----
+  // Motion
   const cam = v.camera, base = { pos: new THREE.Vector3(4.75, 0.8, 5.85), target: new THREE.Vector3(-0.46, 0.5, 0.67) };
   cam.fov = 26; cam.far = 200; cam.updateProjectionMatrix();
   v.controls.target.copy(base.target);
@@ -225,7 +206,7 @@ async ({ fps, seconds, sub }) => {
     cam.lookAt(base.target);
   };
 
-  // ---- Accumulation and compositing ----
+  // Accumulation and compositing
   const gl = r.getContext();
   const w = r.domElement.width, h = r.domElement.height, n = w * h;
   const px = new Uint8Array(n * 4);
@@ -235,7 +216,7 @@ async ({ fps, seconds, sub }) => {
   const pass = (p, f) => {
     const a = acc[p], count = sub[p]; a.fill(0); mode(p); envOn = p !== 'A';
     for (let s = 0; s < count; s++) {
-      setTime((f + ((s + 0.5) / count) * 0.5) / fps);     // 180-degree shutter
+      setTime((f + ((s + 0.5) / count) * 0.5) / fps);
       r.render(scene, cam);
       gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
       for (let i = 0; i < px.length; i++) a[i] += px[i];
@@ -248,7 +229,7 @@ async ({ fps, seconds, sub }) => {
       for (const p of ['A', 'B', 'C']) { const t = performance.now(); pass(p, f); T[p] = Math.round(performance.now() - t); }
       restore();
       const A = acc.A, B = acc.B, Cc = acc.C, d = id.data;
-      for (let y = 0; y < h; y++) {                       // C over B over A, flipped (WebGL rows are bottom-up)
+      for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
           const i = ((h - 1 - y) * w + x) * 4, k = (y * w + x) * 4;
           const ca = Cc[i + 3], ba = B[i + 3] * (1 - ca) + ca;
@@ -311,7 +292,6 @@ def encode(total, t0):
     x264 = ['-c:v', 'libx264', '-preset', 'veryslow', '-tune', 'film', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an']
     enc([*x264, '-crf', '23', os.path.join(OUT, 'test-drive-1280.mp4')])
     enc(['-vf', 'scale=854:-2:flags=lanczos', *x264, '-crf', '25', os.path.join(OUT, 'test-drive-854.mp4')])
-    # AV1 copy of the large file: about half the size at the same quality; used by browsers that report AV1 support.
     enc(['-c:v', 'libsvtav1', '-preset', '4', '-crf', '38', '-g', '96', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an',
          os.path.join(OUT, 'test-drive-1280-av1.mp4')])
     from PIL import Image
@@ -324,27 +304,3 @@ def encode(total, t0):
 
 if __name__ == '__main__':
     main()
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00
-
-// Update log: session 2-1
-
-// Update log: session 5-5

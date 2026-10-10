@@ -1,10 +1,6 @@
-"""Renders the landing-page images and wheel thumbnails from the configurator itself,
-so every picture on the site matches the 3D model exactly.
+"""Renders the landing-page stills from the 3D model.
 
-Usage (from the project folder):
-    pip install playwright pillow && python -m playwright install chromium
-    python tools/render_stills.py            # all stills
-    python tools/render_stills.py seq-paint  # only the named ones
+Usage: python tools/render_stills.py [name ...]
 """
 import base64, io, json, os, subprocess, sys, time
 from PIL import Image, ImageDraw, ImageFilter
@@ -17,7 +13,6 @@ PORT = 8791
 ARGOS = {'paint': 'arancio-argos', 'wheels': 'glossy-black', 'calipers': 'yellow', 'interior': 'nero-ade', 'lift': 'fitted'}
 DEFAULT = {'paint': 'giallo-evros', 'wheels': 'silver', 'calipers': 'black', 'interior': 'nero-ade', 'lift': 'not-fitted'}
 
-# name: (build, preview, camera position, camera target, fov, output size, crop aspect, background)
 STILLS = {
     'seq-paint':       ({**ARGOS, 'wheels': 'silver', 'calipers': 'black'}, {}, [4.25, 1.3, 5.45], [0.05, 0.5, 0.0], 30, (1600, 1200), 4 / 3, 'stage'),
     'seq-wheels':      (ARGOS, {}, ['fw.x+1.7', 0.62, 'fw.z+1.3'], ['fw.x', 'fw.y', 'fw.z'], 30, (1600, 1200), 4 / 3, 'stage'),
@@ -56,7 +51,6 @@ def main(names):
             browser = p.chromium.launch(args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
             for name in names:
                 build, preview, pos, target, fov, size, aspect, bg = STILLS[name]
-                # Render at 1.25x the output size, then downsample for clean edges.
                 vw = round(size[0] / 1.5 * 1.25) if aspect is None else round(size[0] / 1.5 * 1.25 * (16 / 9) / aspect)
                 vh = round(vw * 9 / 16)
                 page = browser.new_page(viewport={'width': vw, 'height': vh}, device_scale_factor=1.5, reduced_motion='reduce')
@@ -93,23 +87,3 @@ def main(names):
 
 if __name__ == '__main__':
     main(sys.argv[1:] or list(STILLS))
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

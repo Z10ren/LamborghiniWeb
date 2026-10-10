@@ -1,13 +1,3 @@
-// Prepares the Sketchfab GLB for the configurator.
-// Usage: node tools/prep-model.mjs <input.glb> <output.glb>
-//
-// What it does, in order:
-//  1. Renames materials to clear English part names (original name kept in material.extras.sourceName).
-//  2. Fixes materials that exported as flat white metal (seats, lamps, grilles, carpet...).
-//  3. Cuts the rear wing out of the main body mesh into its own node, "aero_wing".
-//  4. Simplifies only heavy, small or hidden parts (tyres, rims, brakes, steering wheel...). The body is never simplified.
-//  5. Compresses with meshopt. Nothing is merged: every mesh, node and material stays separate.
-
 import { NodeIO, PropertyType } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { weldPrimitive, simplifyPrimitive, compactPrimitive, prune, meshopt } from '@gltf-transform/functions';
@@ -23,7 +13,7 @@ const doc = await io.read(input);
 const root = doc.getRoot();
 const buffer = root.listBuffers()[0];
 
-// ---------- 1. Material names ----------
+// 1. Material names
 const RENAME = {
   'carpaint_BABY_BLUE': 'paint_body',
   'jante': 'wheel_rim',
@@ -69,14 +59,14 @@ for (const m of root.listMaterials()) {
   byName[name] = m;
 }
 
-// ---------- 2. Material fixes (hex values are sRGB; glTF stores linear) ----------
+// 2. Material fixes
 const lin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 const hex = (h, a = 1) => { const n = parseInt(h.slice(1), 16); return [lin(((n >> 16) & 255) / 255), lin(((n >> 8) & 255) / 255), lin((n & 255) / 255), a]; };
 const FIX = {
-  paint_body:              { color: '#e8b10f', metal: 0.0, rough: 0.35 },   // Giallo Evros (standard), approximate
-  wheel_rim:               { color: '#b8bbbe', metal: 1.0, rough: 0.30 },   // silver (standard finish)
-  brake_caliper:           { color: '#141414', metal: 0.2, rough: 0.50 },   // black (standard)
-  interior_leather:        { color: '#151413', metal: 0.0, rough: 0.60 },   // Nero Ade, approximate
+  paint_body:              { color: '#e8b10f', metal: 0.0, rough: 0.35 },
+  wheel_rim:               { color: '#b8bbbe', metal: 1.0, rough: 0.30 },
+  brake_caliper:           { color: '#141414', metal: 0.2, rough: 0.50 },
+  interior_leather:        { color: '#151413', metal: 0.0, rough: 0.60 },
   interior_leather_insert: { color: '#1b1a19', metal: 0.0, rough: 0.65 },
   steering_wheel_rim:      { color: '#161616', metal: 0.0, rough: 0.55 },
   interior_carpet:         { color: '#1d1d1d', metal: 0.0, rough: 0.95 },
@@ -104,11 +94,10 @@ for (const [name, f] of Object.entries(FIX)) {
   if (f.metal !== undefined) m.setMetallicFactor(f.metal);
   if (f.rough !== undefined) m.setRoughnessFactor(f.rough);
 }
-// Lamps are switched on at runtime; bake them "off" so the default view is daytime.
+
 byName.lamp_front_emitter.setEmissiveFactor([0.35, 0.35, 0.35]);
 byName.lamp_rear_emitter.setEmissiveFactor([0.25, 0.0, 0.0]);
 
-// ---------- 3. Cut the rear wing out of the main body ----------
 const bodyNode = root.listNodes().find((n) => n.getName() === 'Object_65');
 const carNode = root.listNodes().find((n) => n.getName() === 'car_29');
 if (!bodyNode || !carNode) throw new Error('Body node not found');
@@ -126,7 +115,7 @@ for (let t = 0; t < idx.length; t += 3) {
 }
 const islands = new Map();
 for (let t = 0; t < idx.length; t += 3) { const r = find(rep[idx[t]]); if (!islands.has(r)) islands.set(r, []); islands.get(r).push(t / 3); }
-// The wing is the only island of exactly 3,264 triangles (verified visually: wide, thin, at the top rear).
+
 const wingIsland = [...islands.values()].filter((tris) => tris.length === 3264);
 if (wingIsland.length !== 1) throw new Error(`Expected one wing island, found ${wingIsland.length}`);
 const wingSet = new Set(wingIsland[0]);
@@ -143,11 +132,10 @@ const wingNode = doc.createNode('aero_wing').setMesh(doc.createMesh('aero_wing')
 carNode.addChild(wingNode);
 bodyNode.setName('body_main');
 
-// Clear node names for the parts the configurator drives.
 const NODE_RENAME = { 'Bone_9': 'doors_hinge', 'Bone.001_4': 'door_a_hinge', 'Bone.002_8': 'door_b_hinge' };
 for (const n of root.listNodes()) if (NODE_RENAME[n.getName()]) n.setName(NODE_RENAME[n.getName()]);
 
-// ---------- 4. Selective simplification ----------
+// 4. Selective simplification
 const SIMPLIFY = { tyre: 0.5, wheel_rim: 0.55, brake_caliper: 0.5, brake_disc: 0.5, brake_disc_bell: 0.5, interior_headliner: 0.45, badge_dark: 0.4, chrome_dark: 0.5, steering_wheel_rim: 0.6 };
 const triCount = (p) => (p.getIndices() ? p.getIndices().getCount() : p.getAttribute('POSITION').getCount()) / 3;
 let before = 0, after = 0;
@@ -164,35 +152,15 @@ for (const mesh of root.listMeshes()) {
 }
 console.log(`Triangles: ${before} -> ${after}`);
 
-// ---------- 5. Clean up and compress (no joins, no flattening, no material merging) ----------
+// 5. Clean up and compress
 await doc.transform(
   prune({ propertyTypes: [PropertyType.ACCESSOR, PropertyType.BUFFER_VIEW ?? 'BufferView'].filter(Boolean), keepLeaves: true, keepAttributes: true }),
   meshopt({ encoder: MeshoptEncoder, level: 'high' }),
 );
 doc.getRoot().getAsset().extras = {
   ...doc.getRoot().getAsset().extras,
-  modifiedBy: 'Aventador configurator student project: materials renamed and adjusted, rear wing split into its own node, selected parts simplified, meshopt compression.',
+  modifiedBy: 'AURELION: materials renamed and adjusted, rear wing split into its own node, selected parts simplified, meshopt compression.',
 };
 await io.write(output, doc);
 const fs = await import('node:fs');
 console.log(`Wrote ${output}: ${(fs.statSync(output).size / 1e6).toFixed(2)} MB, ${root.listMeshes().length} meshes, ${root.listMaterials().length} materials, ${root.listNodes().length} nodes`);
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

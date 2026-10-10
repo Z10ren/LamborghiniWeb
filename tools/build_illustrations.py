@@ -1,17 +1,13 @@
-"""Writes the engineering illustrations (inline SVG) for index.html from data/outlines.json.
+"""Writes the engineering drawings into index.html from data/outlines.json.
 
-The outlines are traced from the 3D model by tools/render_outlines.py, so the drawings show the real
-Aventador LP 700-4 shape. This script prints nothing into index.html by itself: it rewrites the block
-between <!-- ILLUSTRATIONS:START --> and <!-- ILLUSTRATIONS:END --> markers in index.html.
-
-Usage (from the project folder):  python tools/build_illustrations.py
+Usage: python tools/build_illustrations.py
 """
 import json, os, re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 D = json.load(open(os.path.join(ROOT, 'data', 'outlines.json')))
 GROUND = 233
-MONO = (201, 371)          # front and rear bulkheads of the carbon monocoque, in side-view units (x)
+MONO = (201, 371)
 
 
 def pts(path):
@@ -19,7 +15,6 @@ def pts(path):
 
 
 def top_envelope(poly, x):
-    """Highest point (smallest y) of a closed polygon at a given x, or None."""
     ys = []
     for (x1, y1), (x2, y2) in zip(poly, poly[1:] + poly[:1]):
         if (x1 - x) * (x2 - x) <= 0 and x1 != x2:
@@ -28,7 +23,6 @@ def top_envelope(poly, x):
 
 
 def streamline(poly, offset, x0=0, x1=600, step=10):
-    """An airflow line that follows the roof at a distance and straightens out ahead of and behind the car."""
     xs = list(range(x0, x1 + 1, step))
     raw = []
     for x in xs:
@@ -38,16 +32,16 @@ def streamline(poly, offset, x0=0, x1=600, step=10):
     first, last = known[0], known[-1]
     ys = []
     for x, y in zip(xs, raw):
-        if y is None:           # level ahead of the car, easing down a little behind it
+        if y is None:
             y = first[1] if x < first[0] else last[1] + 10 * min(1, (x - last[0]) / 40)
         ys.append(y)
-    for _ in range(3):        # smooth
+    for _ in range(3):
         ys = [ys[0]] + [(ys[i - 1] + 2 * ys[i] + ys[i + 1]) / 4 for i in range(1, len(ys) - 1)] + [ys[-1]]
     return 'M' + ' L'.join(f'{x} {y:.1f}' for x, y in zip(xs, ys))
 
 
 side, top, wheels = D['side'], D['top'], D['wheels']
-near = sorted([w for w in wheels if w['top'][1] > 165], key=lambda w: w['side'][0])     # visible wheels in the side view
+near = sorted([w for w in wheels if w['top'][1] > 165], key=lambda w: w['side'][0])
 front_axle = sum(w['top'][0] for w in wheels[:2]) / 2
 rear_axle = sum(w['top'][0] for w in wheels[2:]) / 2
 body = ' '.join(side['body'])
@@ -82,7 +76,6 @@ defs = f'''<svg width="0" height="0" style="position:absolute" aria-hidden="true
                     <stop offset="1" stop-color="#fff2c4" stop-opacity=".9"/>
                 </linearGradient>
                 <clipPath id="clip-aventador-body"><path d="{body}"/></clipPath>
-                <!-- Aventador LP 700-4, side elevation traced from the 3D model (110 units per metre, ground at y=233) -->
                 <symbol id="aventador-body" viewBox="0 0 600 260">
                     <path d="{body}" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.55)" stroke-width="1.4" stroke-linejoin="round"/>
                     <g fill="rgba(230,179,30,0.08)" stroke="rgba(255,255,255,0.35)" stroke-linejoin="round">{glass_svg}</g>
@@ -96,7 +89,6 @@ defs = f'''<svg width="0" height="0" style="position:absolute" aria-hidden="true
             </defs>
         </svg>'''
 
-# Panel 1: carbon monocoque with aluminium front and rear frames
 m0, m1 = MONO
 chassis = f'''<svg viewBox="0 0 600 260" class="w-[92%] h-auto relative float-anim" role="img" aria-label="Side view of the Aventador LP 700-4 with the carbon-fibre monocoque highlighted between the aluminium front and rear frames">
                             <use href="#aventador-side"/>
@@ -118,7 +110,6 @@ chassis = f'''<svg viewBox="0 0 600 260" class="w-[92%] h-auto relative float-an
                             </g>
                         </svg>'''
 
-# Panel 2: plan view of the drivetrain (front on the left)
 tb = ' '.join(top['body'])
 tglass = ''.join(f'<path d="{g}"/>' for g in top['glass'])
 cy = 165
@@ -132,9 +123,7 @@ powertrain = f'''<svg viewBox="0 0 600 330" class="w-full h-auto relative" role=
                             <path d="{tb}" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.4)" stroke-width="1.4" stroke-linejoin="round"/>
                             <g fill="rgba(230,179,30,0.05)" stroke="rgba(255,255,255,0.18)">{tglass}</g>
                             <g fill="#1b1b1b" stroke="rgba(255,255,255,0.5)">{tyres}</g>
-                            <!-- seats either side of the centre tunnel -->
                             <g fill="none" stroke="rgba(255,255,255,0.22)"><rect x="262" y="{cy - 62}" width="46" height="36" rx="9"/><rect x="262" y="{cy + 26}" width="46" height="36" rx="9"/></g>
-                            <!-- drive: gearbox -> rear differential and forward shaft -> Haldex coupling -> front wheels -->
                             <g fill="none" stroke="#e6b31e" stroke-width="2" class="flow">
                                 <path d="M{gear[0]} {cy} L{front_axle + 14:.1f} {cy}"/>
                                 <path d="M{front_axle:.1f} {cy - 12} L{front_axle:.1f} {fw[0]['top'][1] + 13:.1f}"/><path d="M{front_axle:.1f} {cy + 12} L{front_axle:.1f} {fw[1]['top'][1] - 13:.1f}"/>
@@ -157,7 +146,6 @@ powertrain = f'''<svg viewBox="0 0 600 330" class="w-full h-auto relative" role=
                             </g>
                         </svg>'''
 
-# Panel 3: airflow over the real roof line, wing at its three positions
 flow = [streamline(silhouette, o) for o in (14, 36, 60)]
 wing_svg = f'''<svg viewBox="0 0 600 300" class="w-full h-auto" role="img" aria-label="Side view of the Aventador LP 700-4 with airflow lines over the body and the active rear wing">
                         <g fill="none" stroke="url(#goldLine)" stroke-width="1.5" class="stream">
@@ -191,23 +179,3 @@ for key, content in (('ILLUSTRATIONS-DEFS', defs), ('ILLUSTRATION-CHASSIS', chas
     html = replace(html, key, content)
 open(path, 'w', encoding='utf-8').write(html)
 print('illustrations written; wing pivot', pivot, 'axles', round(front_axle, 1), round(rear_axle, 1))
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

@@ -32,7 +32,7 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
   const readouts = {};
   const framed = (() => { try { return window.self !== window.top; } catch { return true; } })();
 
-  // ---------- Step chips ----------
+  // Step chips
   STEPS.forEach((s, i) => {
     stepsEl.append(h('a', { href: `#${s.id}`, class: 'step-chip', 'data-step': s.id, onclick: (e) => { e.preventDefault(); actions.goToStep(s.id); } },
       h('span', { class: 'step-num', 'aria-hidden': 'true' }, String(i + 1)), s.title));
@@ -58,7 +58,7 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
     if (e.target.name === groupId) state.set(groupId, e.target.value, { source: 'ui' });
   });
 
-  // ---------- Paint ----------
+  // Paint
   const paint = state.group('paint');
   const paintFs = h('fieldset', { class: 'fs' }, h('legend', { class: 'sr-only' }, 'Paint colour'));
   for (const finish of ['solid', 'metallic', 'pearl', 'matte']) {
@@ -73,7 +73,7 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
   onGroupChange(paintFs, 'paint');
   sectionsEl.append(section('paint', 'Paint', paint.note, readout('paint'), paintFs));
 
-  // ---------- Wheels & calipers ----------
+  // Wheels & calipers
   const wheels = state.group('wheels'), calipers = state.group('calipers');
   const wheelFs = h('fieldset', { class: 'fs' }, h('legend', { class: 'fs-legend' }, wheels.label),
     h('div', { class: 'card-grid' }, wheels.options.map((o) => radio('wheels', o.id, state.build.wheels === o.id, [
@@ -91,7 +91,7 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
   onGroupChange(calFs, 'calipers');
   sectionsEl.append(section('wheels', 'Wheels and brakes', null, readout('wheels'), wheelFs, readout('calipers'), calFs));
 
-  // ---------- Wing (preview) ----------
+  // Wing
   const wingCfg = catalog.previews.wing;
   const wingFs = h('fieldset', { class: 'fs' }, h('legend', { class: 'fs-legend' }, `${wingCfg.label} · preview`),
     h('div', { class: 'segmented' }, wingCfg.positions.map((p) => radio('wing', p.id, state.preview.wing === p.id, [h('span', {}, p.name)], { class: 'seg-choice' }))));
@@ -99,12 +99,12 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
   sectionsEl.append(section('aero', 'Rear wing', wingCfg.note, wingFs,
     h('p', { class: 'fs-note' }, 'Previews are for looking around. They are not part of your build.')));
 
-  // ---------- Lights (preview) ----------
+  // Lights
   const lightsBtn = h('button', { type: 'button', class: 'toggle', 'aria-pressed': 'false', 'data-preview': 'lights', onclick: () => actions.togglePreview('lights') },
     h('span', { class: 'toggle-track', 'aria-hidden': 'true' }, h('span', { class: 'toggle-dot' })), h('span', { class: 'toggle-label' }, 'Lights on'));
   sectionsEl.append(section('lighting', 'Lights', catalog.previews.lights.note, lightsBtn));
 
-  // ---------- Interior ----------
+  // Interior
   const interior = state.group('interior');
   const intFs = h('fieldset', { class: 'fs' }, h('legend', { class: 'sr-only' }, interior.label),
     h('div', { class: 'leather-grid' }, interior.options.map((o) => radio('interior', o.id, state.build.interior === o.id, [
@@ -116,7 +116,7 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
     h('span', { class: 'toggle-track', 'aria-hidden': 'true' }, h('span', { class: 'toggle-dot' })), h('span', { class: 'toggle-label' }, mode === 'image' ? 'Show the cabin' : 'Doors open'));
   sectionsEl.append(section('interior', 'Interior', interior.note, readout('interior'), intFs, doorsBtn));
 
-  // ---------- Performance ----------
+  // Performance
   const lift = state.group('lift');
   const specs = h('dl', { class: 'spec-grid' }, catalog.car.specs.map((s) => h('div', { class: 'spec' },
     h('dt', {}, s.label), h('dd', {}, h('span', { class: 'spec-value' }, s.value), ' ', h('span', { class: 'spec-unit' }, s.unit)))));
@@ -130,7 +130,7 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
   onGroupChange(liftFs, 'lift');
   sectionsEl.append(section('performance', 'Performance', 'Factory figures for the LP 700-4 coupé. There were no power upgrades.', specs, liftFs));
 
-  // ---------- Summary ----------
+  // Summary
   const summaryList = h('dl', { class: 'summary-list' });
   const included = h('ul', { class: 'included' }, catalog.previews.included.map((i) => h('li', {}, h('strong', {}, i.name), ' ', i.detail)));
   const copyBtn = h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => actions.copySummary() }, 'Copy build');
@@ -141,9 +141,9 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
   sectionsEl.append(section('summary', 'Your build', 'Colours are approximate on-screen renderings of the factory names.',
     summaryList, h('h3', { class: 'sub-h' }, 'Included in this model'), included,
     h('div', { class: 'btn-row' }, requestBtn, copyBtn, saveBtn, resetBtn), copyFallback,
-    h('p', { class: 'fs-note' }, 'Request this build opens the demo booking form. It is a student demo: nothing is sent.')));
+    h('p', { class: 'fs-note' }, 'Request this build opens the booking form. It is a demo, so nothing is sent.')));
 
-  // ---------- Sources and credits ----------
+  // Sources and credits
   const foot = document.getElementById('panel-foot');
   foot.append(
     h('h3', { class: 'sub-h' }, 'Sources'),
@@ -151,10 +151,10 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
     h('p', { class: 'credit' }, '3D model: ', h('a', { href: catalog.sources.find((s) => s.id === 'model').url, target: '_blank', rel: 'noopener' }, '“( FREE ) Lamborghini Aventador LP 700-4”'),
       ' by SDC PERFORMANCE™️, licensed under ', h('a', { href: 'https://creativecommons.org/licenses/by/4.0/', target: '_blank', rel: 'noopener' }, 'CC BY 4.0'),
       '. Modified: materials adjusted, rear wing separated, parts simplified and compressed.'),
-    h('p', { class: 'credit' }, 'Unofficial student project. Not affiliated with or endorsed by Automobili Lamborghini S.p.A. Lamborghini and Aventador are trademarks of their owner.'),
+    h('p', { class: 'credit' }, 'AURELION is not affiliated with or endorsed by Automobili Lamborghini S.p.A. Lamborghini and Aventador are trademarks of their owner.'),
   );
 
-  // ---------- Updates ----------
+  // Updates
   const describe = (groupId) => {
     const g = state.group(groupId), o = state.option(groupId);
     if (groupId === 'paint') return `${o.name} · ${FINISH_LABELS[o.finish]} · ${o.availability === 'standard' ? 'Standard' : 'Option'}`;
@@ -203,7 +203,6 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
     }
   });
 
-  // Highlight the step chip for the section in view
   const panelScroller = document.querySelector('.panel');
   const io = new IntersectionObserver((entries) => {
     entries.forEach((en) => {
@@ -214,30 +213,10 @@ export function createUI({ catalog, state, actions, mode = '3d' }) {
     });
   }, matchMedia('(min-width: 960px)').matches
     ? { root: panelScroller, rootMargin: '-30% 0px -65% 0px' }
-    : { root: null, rootMargin: '-62% 0px -30% 0px' });   // phones: the band just below the sticky stage
+    : { root: null, rootMargin: '-62% 0px -30% 0px' });
   sectionsEl.querySelectorAll('.opt-section').forEach((s) => io.observe(s));
 
   refresh();
   syncPreview();
   return { refresh, announce, copyFallback, framed };
 }
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

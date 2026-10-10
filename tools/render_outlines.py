@@ -1,10 +1,6 @@
-"""Traces the Aventador's real outlines from the 3D model for the line illustrations on the landing page.
+"""Traces the car's side and plan outlines from the 3D model into data/outlines.json.
 
-Renders flat masks with orthographic cameras (side elevation and plan view), traces them with OpenCV
-and writes data/outlines.json: SVG path data plus wheel and axle positions, already scaled to the
-illustration coordinates (side view 600x260, plan view 600x330, car facing left, 110 px per metre).
-
-Usage (from the project folder):  python tools/render_outlines.py
+Usage: python tools/render_outlines.py
 """
 import base64, json, os, subprocess, sys, time
 import cv2
@@ -13,8 +9,8 @@ from playwright.sync_api import sync_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PORT = 8806
-PX = 8            # mask pixels per illustration unit (traced at 8x, then scaled down)
-SCALE = 110       # illustration units per metre
+PX = 8
+SCALE = 110
 
 MASK_JS = r"""
 async ({ scale, px }) => {
@@ -31,9 +27,8 @@ async ({ scale, px }) => {
   const saved = meshes.map((m) => [m, m.material, m.renderOrder]);
   const restore = () => saved.forEach(([m, mat, ro]) => { m.material = mat; m.renderOrder = ro; });
   const bg = scene.background, env = scene.environment; scene.background = null;
-  const others = []; scene.traverse((o) => { if (o.isMesh && o.visible && !meshes.includes(o)) { others.push(o); o.visible = false; } });   // floor, contact shadow
+  const others = []; scene.traverse((o) => { if (o.isMesh && o.visible && !meshes.includes(o)) { others.push(o); o.visible = false; } });
 
-  // Wheels: centre and radius from the tyre geometry
   const wheels = v.wheels.map((w) => {
     const b = new THREE.Box3();
     w.traverse((m) => { if (m.isMesh && m.material.name === 'tyre') b.expandByObject(m); });
@@ -48,7 +43,7 @@ async ({ scale, px }) => {
 
   const wingMeshes = []; v.wingPivot.traverse((m) => { if (m.isMesh) wingMeshes.push(m); });
   const byName = (names) => (m) => names.includes(m.material.name);
-  // pick: which meshes are drawn white; every other mesh still hides what is behind it
+
   const render = (cam, w, h, pick) => {
     meshes.forEach((m) => {
       if (!pick || pick(m)) { m.material = white; m.renderOrder = 1000; }
@@ -64,9 +59,9 @@ async ({ scale, px }) => {
   };
 
   const len = box.max.z - box.min.z, wid = box.max.x - box.min.x, hei = box.max.y - box.min.y;
-  const k = scale * px;                       // mask pixels per metre
+  const k = scale * px;
   const out = { box: { min: box.min.toArray(), max: box.max.toArray() }, wheels, masks: {} };
-  // Side elevation from the car's right: front (+z) on the left of the picture
+
   const sw = Math.round(600 * px), sh = Math.round(260 * px);
   const side = new THREE.OrthographicCamera(-sw / k / 2, sw / k / 2, sh / k / 2, -sh / k / 2, 0.1, 100);
   const cz = (box.min.z + box.max.z) / 2, ground = box.min.y;
@@ -78,10 +73,10 @@ async ({ scale, px }) => {
   out.masks.sideWing = render(side, sw, sh, (m) => wingMeshes.includes(m));
   out.masks.sideGlass = render(side, sw, sh, byName(['glass', 'glass_door']));
   const pv = new THREE.Vector3(); v.wingPivot.getWorldPosition(pv); out.wingPivot = [pv.z, pv.y];
-  // Plan view from above: front on the left
+
   const tw = Math.round(600 * px), th = Math.round(330 * px);
   const top = new THREE.OrthographicCamera(-tw / k / 2, tw / k / 2, th / k / 2, -th / k / 2, 0.1, 100);
-  const cx = wheels.reduce((a, w) => a + w.x, 0) / wheels.length;   // centre line from the wheels (the bounding box is lopsided)
+  const cx = wheels.reduce((a, w) => a + w.x, 0) / wheels.length;
   top.up.set(-1, 0, 0); top.position.set(cx, 50, cz); top.lookAt(cx, 0, cz); top.updateProjectionMatrix();
   out.top = { cx, cz };
   out.masks.top = render(top, tw, th, null);
@@ -99,7 +94,6 @@ def decode(url):
 
 
 def paths(mask, eps=1.2, min_area=40, holes=False, smooth=1):
-    """Contours of a mask as SVG path data in illustration units (mask is PX times larger)."""
     m = cv2.GaussianBlur(mask, (0, 0), PX * 0.35) if smooth else mask
     _, m = cv2.threshold(m, 127, 255, cv2.THRESH_BINARY)
     mode = cv2.RETR_CCOMP if holes else cv2.RETR_EXTERNAL
@@ -136,16 +130,15 @@ def main():
             cv2.imwrite(os.path.join(debug, f'{k}.png'), cv2.resize(m, (m.shape[1] // 4, m.shape[0] // 4)))
 
     side, top = res['side'], res['top']
-    def side_xy(z, y):   # metres -> side illustration units (front on the left)
+    def side_xy(z, y):
         return 300 - (z - side['cz']) * SCALE, 233 - (y - side['ground']) * SCALE
     def top_xy(z, x):
-        return 300 - (z - top['cz']) * SCALE, 165 + (x - top['cx']) * SCALE   # camera up is -x: the car's right side is at the top
+        return 300 - (z - top['cz']) * SCALE, 165 + (x - top['cx']) * SCALE
     wheels = []
     for w in res['wheels']:
         sx, sy = side_xy(w['z'], w['y'])
         tx, ty = top_xy(w['z'], w['x'])
         wheels.append({'side': [round(sx, 1), round(sy, 1)], 'top': [round(tx, 1), round(ty, 1)], 'r': round(w['r'] * SCALE, 1)})
-    # The model sits about 1.5 degrees off straight; level the plan view on the axle line and centre it.
     import math
     fw, rw = sorted(wheels, key=lambda w: w['top'][0])[:2], sorted(wheels, key=lambda w: w['top'][0])[2:]
     f = np.mean([w['top'] for w in fw], axis=0); r_ = np.mean([w['top'] for w in rw], axis=0)
@@ -160,7 +153,6 @@ def main():
     for k in ('top', 'topGlass'):
         masks[k] = cv2.warpAffine(masks[k], Mpx, (masks[k].shape[1], masks[k].shape[0]), flags=cv2.INTER_LINEAR)
     data = {
-        'note': 'Generated by tools/render_outlines.py from the 3D model. Side view 600x260 and plan view 600x330, car facing left, 110 units per metre, ground line y=233 (side).',
         'plan_view_levelled_by_deg': round(angle, 2),
         'wheels': wheels,
         'side': {'silhouette': paths(masks['side'], eps=0.9), 'body': paths(masks['sideBody'], eps=0.9, min_area=400),
@@ -174,23 +166,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

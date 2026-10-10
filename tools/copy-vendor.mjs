@@ -1,5 +1,3 @@
-// Copies the pinned three.js files the site needs into vendor/three, so the site works offline
-// and needs no CDN. Run after `npm install`: node tools/copy-vendor.mjs
 import { cpSync, mkdirSync } from 'node:fs';
 const files = [
   'LICENSE',
@@ -17,25 +15,3 @@ for (const f of files) {
   cpSync(`node_modules/three/${f}`, to);
 }
 console.log(`Copied ${files.length} three.js files to vendor/three`);
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00
-
-// Update log: session 8-8

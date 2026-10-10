@@ -1,6 +1,3 @@
-/* New landing page: hero, step-by-step sequence, numbers strip and starter builds.
-   Uses the site's existing tokens (site.css): black ground, gold accent, Syncopate for display,
-   Space Grotesk for data and Inter for body text. The site is dark only by design. */
 :root {
     color-scheme: dark;
     --lp-line: rgba(255, 255, 255, 0.1);
@@ -8,11 +5,9 @@
     --lp-gutter: clamp(16px, 4vw, 64px);
 }
 
-/* Navbar additions: notch-safe padding and the unofficial label next to the wordmark */
 .site-nav { padding-top: calc(1.5rem + env(safe-area-inset-top, 0px)); }
 .site-nav.is-scrolled { padding-top: calc(.9rem + env(safe-area-inset-top, 0px)); }
 .brand-lockup { display: flex; flex-direction: column; gap: 4px; }
-.brand-note { font: 500 9px 'Space Grotesk', Arial, sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--neon-gold); }
 .brand-logo { display: block; height: 24px; width: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .55)); }
 .footer-logo { display: block; height: 30px; width: auto; }
 @media (max-width: 767px) { .brand-logo { height: 18px; } .footer-logo { height: 24px; } }
@@ -31,16 +26,15 @@
 .lp-btn-line { border: 1px solid rgba(255, 255, 255, .25); color: #fff; }
 .lp-btn-line:hover { border-color: var(--neon-gold); color: var(--neon-gold); }
 
-/* ---------- Hero ---------- */
+/* Hero */
 .lp-hero { position: relative; min-height: clamp(600px, 88vh, 960px); display: flex; align-items: stretch; overflow: hidden; background: #050505; isolation: isolate; }
 .lp-hero-media { position: absolute; inset: 0; z-index: -1; }
 .lp-hero-img { width: 100%; height: 100%; object-fit: cover; object-position: 62% 55%; animation: lp-develop 2.4s cubic-bezier(.2, .7, .2, 1) both; }
 .lp-hero-media::after { content: ''; position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(5, 5, 5, .6) 0%, transparent 20%),   /* keeps the navbar readable over the tunnel lights */
+    background: linear-gradient(180deg, rgba(5, 5, 5, .6) 0%, transparent 20%),
         linear-gradient(90deg, rgba(5, 5, 5, .7) 0%, rgba(5, 5, 5, .2) 30%, transparent 50%), linear-gradient(0deg, #030303 0%, transparent 22%); }
 @keyframes lp-develop { from { filter: brightness(.45) contrast(1.15); transform: scale(1.04); } to { filter: none; transform: none; } }
 
-/* Test-drive video: sits on the poster (its first frame) and fades in once it is actually playing. */
 .lp-hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 62% 55%;
     opacity: 0; transition: opacity .9s ease; pointer-events: none; }
 .lp-hero-video.is-ready { opacity: 1; }
@@ -65,7 +59,7 @@
 .lp-hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: .25rem; }
 .lp-hero-note { margin: 0; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--lp-muted); }
 
-/* ---------- Sequence ---------- */
+/* Sequence */
 .lp-seq { background: #050505; border-top: 1px solid rgba(255, 255, 255, .05); padding-block: clamp(4.5rem, 10vw, 8rem) clamp(3rem, 6vw, 5rem); }
 .lp-seq-head { display: grid; gap: 1rem; margin-bottom: clamp(2.5rem, 5vw, 4rem); }
 .lp-seq-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
@@ -86,7 +80,7 @@
 .lp-step-link { align-self: flex-start; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--neon-gold); text-decoration: none; border-bottom: 1px solid rgba(230, 179, 30, .4); padding-bottom: 4px; }
 .lp-step-link:hover { color: #fff; border-color: #fff; }
 
-/* ---------- Numbers ---------- */
+/* Numbers */
 .lp-numbers { background: #030303; border-block: 1px solid rgba(255, 255, 255, .06); padding-block: clamp(3rem, 6vw, 4.5rem); }
 .lp-numbers-title { margin: 0 0 1.75rem; font-size: 12px; font-weight: 500; letter-spacing: .3em; text-transform: uppercase; color: var(--lp-muted); }
 .lp-numbers-grid { margin: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-left: 1px solid var(--lp-line); }
@@ -98,7 +92,7 @@
 .lp-source { margin: 1.5rem 0 0; font-size: 12px; color: #6f6e6a; }
 .lp-source a { color: #9a9993; }
 
-/* ---------- Starter builds ---------- */
+/* Starter builds */
 .lp-starters { background: #050505; padding-block: clamp(4rem, 8vw, 6.5rem); }
 .lp-starters-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 1rem 2rem; margin-bottom: 2rem; }
 .lp-starters-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 24px); }
@@ -111,16 +105,16 @@
 .lp-card-spec { font-size: 13px; color: var(--lp-muted); }
 .lp-card-cta { margin-top: 8px; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--neon-gold); }
 
-/* ---------- Booking dialog additions ---------- */
+/* Booking dialog */
 .demo-note { display: inline-block; margin-top: .6rem; padding: 4px 8px; border: 1px solid rgba(230, 179, 30, .45); color: var(--neon-gold);
     font: 500 11px 'Space Grotesk', Arial, sans-serif; letter-spacing: .08em; }
 .build-box { white-space: pre-line; line-height: 1.6; min-height: 3rem; }
 .build-box a { color: var(--neon-gold); }
 
-/* ---------- Footer additions ---------- */
+/* Footer */
 .footer-legal { max-width: 70ch; line-height: 1.6; }
 
-/* ---------- Responsive ---------- */
+/* Responsive */
 @media (max-width: 1100px) {
     .lp-numbers-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 1.75rem; }
 }
@@ -151,24 +145,21 @@
     .lp-seq-frame img, .lp-card img { transition: none; }
 }
 
-/* Anchor jumps land below the fixed navbar */
 .lp-seq, .lp-numbers, .lp-starters { scroll-margin-top: 76px; }
 
-/* The artifact host sets a 14px body; keep the original 16px base. */
 body { font-size: 16px; }
 
-/* ---------- Performance (same look, less work for the browser) ---------- */
-/* Looping animations stop while their section is off screen (site.js toggles .is-offscreen). */
+/* Performance */
+
 .is-offscreen, .is-offscreen *, .is-offscreen *::before, .is-offscreen *::after { animation-play-state: paused !important; }
-/* A small tiling noise image instead of a full-screen SVG turbulence filter. */
+
 .noise-overlay { background-image: url("../assets/img/noise.webp"); background-size: 160px 160px; }
-/* Blurring what is behind a moving element has to be redone every frame: use a solid tint instead. */
+
 .glass-card.float-anim, .glass-card.float-anim-delay { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(10, 10, 10, .82); }
 .cursor-hovering .cursor-trail { -webkit-backdrop-filter: none; backdrop-filter: none; }
-/* Lighter navbar blur while scrolling. */
+
 .site-nav.is-scrolled { -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); background: rgba(3, 3, 3, .9); }
-/* Long sections far down the page skip rendering until they get close to the screen.
-   The sizes are placeholders until each section has been rendered once ("auto" then remembers the real size). */
+
 #engineering, #specs, #performance, footer { content-visibility: auto; }
 #engineering { contain-intrinsic-size: auto 2500px; }
 #specs { contain-intrinsic-size: auto 660px; }
@@ -180,7 +171,6 @@ footer { contain-intrinsic-size: auto 412px; }
     footer { contain-intrinsic-size: auto 700px; }
 }
 
-/* Engineering drawings: a light sweep across the carbon monocoque and a flicker running along the V12 cylinders. */
 .mono-scan { animation: mono-scan 3.6s cubic-bezier(.45, .05, .25, 1) infinite; }
 @keyframes mono-scan { 0% { transform: translateX(0); opacity: 0; } 12% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(216px); opacity: 0; } }
 .v12-fire circle { animation: v12-fire 1.2s steps(1) infinite; }
@@ -193,28 +183,4 @@ footer { contain-intrinsic-size: auto 412px; }
 @keyframes v12-fire { 0% { fill: rgba(255, 107, 0, .75); } 8% { fill: none; } }
 @media (prefers-reduced-motion: reduce) { .mono-scan, .v12-fire circle { animation: none; } .mono-scan { opacity: 0; } }
 
-/* Tech specs hologram: the original filter was tuned for a white photo; on the yellow render it turned lime.
-   Turning it grey first gives the same gold glow from any paint colour. */
 .wireframe-car { filter: drop-shadow(0 0 15px rgba(230, 179, 30, .45)) grayscale(1) sepia(1) saturate(2.4) hue-rotate(-6deg) brightness(1.05); }
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00
-
-// Update log: session 7-6

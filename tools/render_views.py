@@ -1,16 +1,6 @@
-"""Pre-renders the image configurator from the 3D model (the same idea as Tesla's configurator).
+"""Renders the picture-configurator layers from the 3D model.
 
-For every view and state it writes:
-  * one full image per paint colour (base layer, transparent background, includes the floor shadow)
-  * transparent overlays for each non-standard wheel finish, caliper colour and leather colour.
-    Overlays are rendered with the rest of the car as an invisible depth mask, so stacking them on any
-    base image replaces exactly the visible pixels of that part and nothing else.
-It also writes data/views.json, which the image configurator reads.
-
-Usage (from the project folder):
-    pip install playwright pillow && python -m playwright install chromium
-    python tools/render_views.py                     # everything
-    python tools/render_views.py front34 side        # only these views
+Usage: python tools/render_views.py [view ...]
 """
 import base64, io, json, os, subprocess, sys, time
 from PIL import Image, ImageChops
@@ -19,12 +9,11 @@ from playwright.sync_api import sync_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'assets', 'views')
 PORT = 8792
-SIZE = (1600, 900)          # output size of every image
-SUPERSAMPLE = 1.25          # render at 2000x1125, then downsample
+SIZE = (1600, 900)
+SUPERSAMPLE = 1.25
 
 DEFAULT_BUILD = {'paint': 'giallo-evros', 'wheels': 'silver', 'calipers': 'black', 'interior': 'nero-ade', 'lift': 'fitted'}
 
-# view id -> camera and its states (each state = preview settings applied before rendering)
 VIEWS = {
     'front34': {'label': 'Front ¾', 'pos': [3.9, 1.3, 5.0], 'target': [0, 0.5, 0.1], 'states': {'default': {}}},
     'side':    {'label': 'Side', 'pos': [6.7, 0.85, 0.05], 'target': [0, 0.52, 0.05],
@@ -41,7 +30,7 @@ async ([viewCfg, statePreview, jobs]) => {
   const THREE = await import('./vendor/three/build/three.module.js');
   const C = window.__configurator, v = C.viewer, fw = v.frontWheel;
   const ev = (x) => typeof x === 'string' ? Function('fw', `return ${x}`)(fw) : x;
-  // reset previews, then apply this state's previews
+
   for (const [k, val] of Object.entries({ doors: false, lights: false, wing: 'stowed', lifted: false })) C.state.setPreview(k, val);
   for (const [k, val] of Object.entries(statePreview)) C.state.setPreview(k, val);
   const camera = () => {
@@ -52,8 +41,8 @@ async ([viewCfg, statePreview, jobs]) => {
     v.camera.lookAt(v.controls.target);
   };
   const depthOnly = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });
-  const isGround = (o) => o === v.floor || o.renderOrder === -1;   // floor and contact shadow
-  // The floor alone, with the car as an invisible mask. Python fades its edges and puts it under every paint.
+  const isGround = (o) => o === v.floor || o.renderOrder === -1;
+
   const floorLayer = () => {
     const saved = [];
     v.scene.traverse((o) => {
@@ -67,7 +56,7 @@ async ([viewCfg, statePreview, jobs]) => {
     for (const [o, m, vis, ro] of saved) { o.material = m; o.visible = vis; o.renderOrder = ro; }
     return url;
   };
-  // The car (and its contact shadow) without the floor plane.
+
   const carOnly = () => {
     v.floor.visible = false;
     const url = v.snapshot('image/png');
@@ -79,10 +68,10 @@ async ([viewCfg, statePreview, jobs]) => {
     v.scene.traverse((o) => {
       if (!o.isMesh) return;
       saved.push([o, o.material, o.visible, o.renderOrder]);
-      if (materialNames.includes(o.material.name)) { o.renderOrder = 1000; return; }   // drawn last
-      if (o.material.transparent) { o.visible = false; return; }   // glass, floor, contact shadow
-      o.material = depthOnly;                                         // still hides what is behind it
-      o.renderOrder = -1000;                                          // drawn first, so depth is ready
+      if (materialNames.includes(o.material.name)) { o.renderOrder = 1000; return; }
+      if (o.material.transparent) { o.visible = false; return; }
+      o.material = depthOnly;
+      o.renderOrder = -1000;
     });
     const url = v.snapshot('image/png');
     for (const [o, m, vis, ro] of saved) { o.material = m; o.visible = vis; o.renderOrder = ro; }
@@ -105,14 +94,13 @@ def decode(data_url):
 
 
 def edge_fade(size, fx=0.16, fy=0.2):
-    """Alpha mask that fades to 0 towards every edge, so the floor never shows a hard rectangle."""
     w, h = size
     def ramp(n, f):
         edge = max(1, int(n * f))
         vals = []
         for i in range(n):
             t = min(1.0, min(i, n - 1 - i) / edge)
-            vals.append(t * t * (3 - 2 * t))            # smoothstep
+            vals.append(t * t * (3 - 2 * t))
         return vals
     rx, ry = ramp(w, fx), ramp(h, fy)
     col = Image.new('L', (1, h)); col.putdata([int(255 * v) for v in ry])
@@ -155,7 +143,6 @@ def main(view_ids):
                     jobs += [{'name': f'calipers-{c}', 'build': {**DEFAULT_BUILD, 'calipers': c}, 'layer': ['brake_caliper']} for c in caliper_layers]
                     if cfg.get('interior'):
                         jobs += [{'name': f'interior-{i}', 'build': {**DEFAULT_BUILD, 'interior': i}, 'layer': ['interior_leather', 'interior_leather_insert']} for i in interior_layers]
-                    # render in small batches so one evaluate call never runs too long
                     for k in range(0, len(jobs), 4):
                         batch = jobs[k:k + 4]
                         urls = page.evaluate(RENDER_JS, [cfg, preview, batch])
@@ -165,7 +152,7 @@ def main(view_ids):
                                 im.putalpha(ImageChops.multiply(im.getchannel('A'), fade))
                                 floor = im
                                 continue
-                            if not job.get('layer'):        # paint: car over the faded floor
+                            if not job.get('layer'):
                                 base = floor.copy(); base.alpha_composite(im); im = base
                             path = os.path.join(OUT, f'{vid}-{sid}-{job["name"]}.webp')
                             size = save_webp(im, path, 80 if job.get('layer') is None else 85)
@@ -188,23 +175,3 @@ def main(view_ids):
 
 if __name__ == '__main__':
     main(sys.argv[1:] or list(VIEWS))
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

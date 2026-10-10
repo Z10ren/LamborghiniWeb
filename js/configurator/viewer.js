@@ -5,9 +5,9 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { Tweens, ease, lerp } from './animations.js';
 import { FINISHES } from './parts.js';
 
-const REAL_LENGTH = 4.78;   // m, overall length of the LP 700-4 (press data). The model is scaled to this.
-const LIFT_HEIGHT = 0.04;   // m, front axle lifting system
-const DOOR_OPEN = 1.15;     // rad around the scissor-door hinge
+const REAL_LENGTH = 4.78;
+const LIFT_HEIGHT = 0.04;
+const DOOR_OPEN = 1.15;
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 
 async function fetchWithProgress(url, onProgress) {
@@ -45,7 +45,6 @@ export function webglAvailable() {
   } catch { return false; }
 }
 
-/** A car studio: mid-grey walls for even fill, a long overhead softbox and two side strips, baked into an environment map. */
 export const STUDIO = { wall: 0.22, floor: 0.04, top: 10, side: 4.2, front: 2.4, rear: 1.4 };
 function createStudioEnvironment(renderer, o = STUDIO) {
   const env = new THREE.Scene();
@@ -56,12 +55,12 @@ function createStudioEnvironment(renderer, o = STUDIO) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(...rgb), side: THREE.DoubleSide }));
     m.position.set(...pos); m.rotation.set(...rot); env.add(m);
   };
-  panel(4, 16, [o.top, o.top, o.top], [0, 13.5, 0], [Math.PI / 2, 0, 0]);                 // overhead strip along the car
-  panel(16, 1.4, [o.side, o.side, o.side], [-14.5, 4.5, 0], [0, Math.PI / 2, 0]);        // left strip
-  panel(16, 1.4, [o.side, o.side, o.side], [14.5, 4.5, 0], [0, -Math.PI / 2, 0]);        // right strip
-  panel(9, 3.5, [o.front, o.front * 0.8, o.front * 0.5], [0, 3, 14.5], [0, Math.PI, 0]); // warm front kicker
-  panel(9, 3.5, [o.rear * 0.85, o.rear * 0.9, o.rear], [0, 3, -14.5], [0, 0, 0]);       // cool rear kicker
-  panel(30, 30, [o.floor, o.floor, o.floor], [0, -1.9, 0], [-Math.PI / 2, 0, 0]);         // floor
+  panel(4, 16, [o.top, o.top, o.top], [0, 13.5, 0], [Math.PI / 2, 0, 0]);
+  panel(16, 1.4, [o.side, o.side, o.side], [-14.5, 4.5, 0], [0, Math.PI / 2, 0]);
+  panel(16, 1.4, [o.side, o.side, o.side], [14.5, 4.5, 0], [0, -Math.PI / 2, 0]);
+  panel(9, 3.5, [o.front, o.front * 0.8, o.front * 0.5], [0, 3, 14.5], [0, Math.PI, 0]);
+  panel(9, 3.5, [o.rear * 0.85, o.rear * 0.9, o.rear], [0, 3, -14.5], [0, 0, 0]);
+  panel(30, 30, [o.floor, o.floor, o.floor], [0, -1.9, 0], [-Math.PI / 2, 0, 0]);
   const pmrem = new THREE.PMREMGenerator(renderer);
   const tex = pmrem.fromScene(env, 0.035).texture;
   pmrem.dispose();
@@ -79,7 +78,6 @@ function radialTexture(stops, size = 256) {
   return t;
 }
 
-/** Soft contact shadow under the body plus darker patches under each tyre. */
 function contactShadowTexture(width, length, wheels) {
   const W = 256, H = Math.round(256 * (length / width));
   const c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -135,7 +133,6 @@ export class CarViewer extends EventTarget {
     this.currentView = null;
     this.running = false;
 
-    // Floor that fades into the page background
     this.floor = new THREE.Mesh(
       new THREE.CircleGeometry(12, 96),
       new THREE.MeshStandardMaterial({ color: 0x1c1c1e, roughness: 0.62, metalness: 0, transparent: true, depthWrite: false,
@@ -145,7 +142,6 @@ export class CarViewer extends EventTarget {
     this.floor.renderOrder = -2;
     scene.add(this.floor);
 
-    // Headlight pools for the "lights on" preview
     this.spots = [-1, 1].map(() => {
       const s = new THREE.SpotLight(0xfff4e6, 0, 0, 0.42, 0.65, 2);
       scene.add(s, s.target);
@@ -179,7 +175,7 @@ export class CarViewer extends EventTarget {
         this.renderer.render(this.scene, this.camera);
         this.needsRender = false;
         idleFrames = 0;
-      } else if (++idleFrames > 30) { this.running = false; return; }   // sleep until something changes
+      } else if (++idleFrames > 30) { this.running = false; return; }
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
@@ -187,7 +183,6 @@ export class CarViewer extends EventTarget {
 
   renderNow() { this.controls.update(); this.renderer.render(this.scene, this.camera); }
 
-  /** Loads a .glb, or a base64 text copy of it (".glb.txt") for hosts that don't serve .glb files. */
   async load(url, onProgress) {
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
@@ -204,12 +199,10 @@ export class CarViewer extends EventTarget {
     car.traverse((o) => { if (o.name && !nodes[o.name]) nodes[o.name] = o; });
     for (const n of ['doors_hinge', 'door_a_hinge', 'aero_wing']) if (!nodes[n]) throw new Error(`Model is missing the "${n}" part`);
 
-    // The source file ships with both doors open and one splayed outward: close them before measuring.
     nodes.doors_hinge.rotation.set(0, 0, 0);
     nodes.door_a_hinge.rotation.set(0, 0, 0);
-    nodes.door_b_hinge.rotation.set(0, -0.465, 0);   // the left door's rest pose is splayed outward in the source file
+    nodes.door_b_hinge.rotation.set(0, -0.465, 0);
 
-    // Scale to real-world metres and centre on the origin, wheels on the floor.
     car.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(car);
     const size = box.getSize(V()), center = box.getCenter(V());
@@ -222,7 +215,6 @@ export class CarViewer extends EventTarget {
     root.updateMatrixWorld(true);
     this.dims = { length: size.z * s, width: size.x * s, height: size.y * s };
 
-    // Paint becomes a clear-coated physical material so finishes (solid, metallic, pearl, matte) read correctly.
     let paintSrc = null;
     car.traverse((o) => { if (o.isMesh && o.material.name === 'paint_body') paintSrc ||= o.material; });
     this.paint = new THREE.MeshPhysicalMaterial({
@@ -236,7 +228,7 @@ export class CarViewer extends EventTarget {
     const mats = (name) => [...(this.materials[name] || [])];
     this.mats = mats;
 
-    // ---- Wheels: tyre, rim and discs spin around the axle; calipers stay put.
+    // Wheels
     const tyres = [];
     car.traverse((o) => { if (o.isMesh && o.material.name === 'tyre') tyres.push(o); });
     const centers = tyres.map((t) => new THREE.Box3().setFromObject(t).getCenter(V()));
@@ -271,13 +263,11 @@ export class CarViewer extends EventTarget {
     this.wheelbase = avg(front, 'z') - avg(rear, 'z');
     this.frontWheel = front.reduce((a, b) => (b.x > a.x ? b : a));
 
-    // ---- Body group pivots on the rear axle so the lifting system raises the front by 40 mm.
     const body = this.body = new THREE.Group();
     body.position.set(0, avg(centers, 'y'), avg(rear, 'z'));
     root.add(body);
     body.updateMatrixWorld(true);
 
-    // ---- Rear wing pivots on its leading edge; two struts appear when it deploys.
     const wing = nodes.aero_wing;
     const wb = new THREE.Box3().setFromObject(wing);
     const wingPivot = this.wingPivot = new THREE.Group();
@@ -299,7 +289,7 @@ export class CarViewer extends EventTarget {
     body.attach(wingPivot);
     this.wingBaseY = wingPivot.position.y;
 
-    // ---- Lamps
+    // Lamps
     this.lampOff = {
       front: mats('lamp_front_emitter').map((m) => m.emissive.clone()),
       rear: mats('lamp_rear_emitter').map((m) => m.emissive.clone()),
@@ -311,7 +301,7 @@ export class CarViewer extends EventTarget {
       s.target.position.set(x * 1.4, 0, fz + 5);
     });
 
-    // ---- Ground contact shadow
+    // Ground contact shadow
     const shadow = new THREE.Mesh(
       new THREE.PlaneGeometry(this.dims.width * 1.25, this.dims.length * 1.18),
       new THREE.MeshBasicMaterial({ map: contactShadowTexture(this.dims.width * 1.25, this.dims.length * 1.18, centers), transparent: true, depthWrite: false, toneMapped: false }),
@@ -332,7 +322,6 @@ export class CarViewer extends EventTarget {
     };
   }
 
-  /** Camera position for a named view, pulled back on tall/narrow screens so the car still fits. */
   viewPose(name) {
     const v = this.views[name];
     const target = V(...v.target), pos = V(...v.pos);
@@ -347,7 +336,7 @@ export class CarViewer extends EventTarget {
     this.currentView = name;
     const { pos, target } = this.viewPose(name);
     const p0 = this.camera.position.clone(), t0 = this.controls.target.clone();
-    // Travel around the car on an arc instead of cutting through it.
+
     const c0 = V(p0.x, 0, p0.z), c1 = V(pos.x, 0, pos.z);
     const a0 = Math.atan2(c0.x, c0.z), a1 = Math.atan2(c1.x, c1.z);
     let da = a1 - a0; if (da > Math.PI) da -= Math.PI * 2; if (da < -Math.PI) da += Math.PI * 2;
@@ -366,7 +355,7 @@ export class CarViewer extends EventTarget {
     }).then((done) => { if (!done) return; this.controls.enabled = true; });
   }
 
-  // ---------- Options (each touches only its own materials or group) ----------
+  // Options
 
   setPaint(option, { duration = 900 } = {}) {
     const m = this.paint;
@@ -377,7 +366,7 @@ export class CarViewer extends EventTarget {
       update: (p) => {
         m.color.copy(from.color).lerp(to.color, p);
         for (const k of ['metalness', 'roughness', 'clearcoat', 'clearcoatRoughness', 'iridescence']) m[k] = lerp(from[k], to[k], p);
-        this.scene.environmentRotation.y = Math.sin(Math.PI * p) * 0.55;   // a light sweep across the bodywork
+        this.scene.environmentRotation.y = Math.sin(Math.PI * p) * 0.55;
         this.needsRender = true;
       },
     });
@@ -459,29 +448,8 @@ export class CarViewer extends EventTarget {
     });
   }
 
-  /** JPEG of the current view (used by "Save image" outside the artifact viewer, and by tools/render_stills.py). */
   snapshot(type = 'image/jpeg', quality = 0.92) {
     this.renderNow();
     return this.renderer.domElement.toDataURL(type, quality);
   }
 }
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

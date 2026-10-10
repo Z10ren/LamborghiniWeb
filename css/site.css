@@ -1,5 +1,3 @@
-/* Site-wide styles, moved unchanged from the original page's <style> block.
-   Additions for the new landing page live in landing.css. */
         :root {
             --bg-deep: #030303;
             --bg-panel: rgba(10, 10, 10, 0.7);
@@ -11,13 +9,6 @@
             --glass-bg: rgba(20, 20, 20, 0.4);
         }
 
-        /* SCROLL FIX (macOS):
-           The old rule put overflow-x:hidden on BOTH html and body. That turns <body> into its
-           own scroll container, so window "scroll" events stop firing, position:sticky breaks,
-           and trackpad/wheel input can get swallowed ("page won't scroll"). overscroll-behavior:none
-           on the root also fought macOS elastic scrolling. Now only the viewport clips x-overflow,
-           body uses overflow-x:clip (which never creates a scroll container), and only horizontal
-           overscroll is disabled (stops accidental swipe-back navigation). */
         html {
             background-color: var(--bg-deep);
             overflow-x: hidden;
@@ -29,11 +20,11 @@
             font-family: 'Inter', sans-serif;
             overflow-x: clip;
         }
-        /* The custom cursor is only enabled once JS confirms a fine pointer */
+
         html.has-custom-cursor, html.has-custom-cursor * { cursor: none; }
         html.menu-open { overflow: hidden; }
 
-        /* ---------- Navbar: transparent over the hero, solid with a divider line once scrolled ---------- */
+        /* Navbar */
         .site-nav { padding-top: 1.5rem; padding-bottom: 1.5rem; background: transparent;
             transition: background-color .4s ease, padding .4s ease, backdrop-filter .4s ease; }
         .site-nav.is-scrolled { padding-top: .9rem; padding-bottom: .9rem; background: rgba(3,3,3,.86);
@@ -49,7 +40,6 @@
         .tech-font { font-family: 'Syncopate', sans-serif; }
         .data-font { font-family: 'Space Grotesk', monospace; }
 
-        /* Global Noise Overlay for Cinematic Texture */
         .noise-overlay {
             position: fixed; inset: 0;
             pointer-events: none; z-index: 9999; opacity: 0.04;
@@ -113,7 +103,7 @@
             position: relative; display: flex; align-items: center;
             min-height: 100vh; padding: 7rem 1.5rem 5rem;
         }
-        /* Syncopate is very wide: size headlines to the column so long titles never break or overlap */
+
         .eng-title { font-size: clamp(1.5rem, 6.5vw, 3.5rem); line-height: 1.05; white-space: nowrap; }
         @media (min-width: 1024px) { .eng-title { font-size: clamp(1.75rem, 2.8vw, 3rem); } }
         .eng-panel + .eng-panel { border-top: 1px solid rgba(255,255,255,0.05); }
@@ -121,7 +111,7 @@
         .flow path, .stream path { stroke-dasharray: 6 10; animation: dashflow 1.6s linear infinite; }
         .stream path { stroke-dasharray: 60 30; animation-duration: 2.4s; }
         @keyframes dashflow { to { stroke-dashoffset: -64; } }
-        /* Nothing on the page may ever scroll sideways */
+
         section, footer { max-width: 100%; }
         @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 
@@ -169,14 +159,13 @@
         .reveal-up { opacity: 0; transform: translateY(50px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
         .reveal-scale { opacity: 0; transform: scale(0.9); transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
         .is-visible { opacity: 1; transform: translate(0) scale(1); }
-        
+
         .color-swatch { width: 30px; height: 30px; border-radius: 50%; transition: transform 0.3s; border: 2px solid transparent; }
         .color-swatch.active { transform: scale(1.2); border-color: white; }
 
-        ::-webkit-scrollbar { display: none; } /* Hide default scrollbar for seamless experience */
+        ::-webkit-scrollbar { display: none; }
         html { scrollbar-width: none; }
 
-        /* Failed-image placeholder keeps layouts intact */
         img.img-failed { object-fit: cover; filter: none !important; mix-blend-mode: normal !important; }
 
         /* Visible keyboard focus */
@@ -184,7 +173,7 @@
             outline: 2px solid var(--neon-gold); outline-offset: 4px;
         }
 
-        /* ---------- Nav icon + full-screen menu ---------- */
+        /* Nav icon + full-screen menu */
         .menu-toggle { width: 44px; height: 44px; display: grid; place-items: center; background: none; border: 0; color: inherit; padding: 0; }
         .menu-toggle .bar { display: block; height: 1.5px; background: currentColor; border-radius: 2px; transition: transform .4s cubic-bezier(.16,1,.3,1), opacity .3s, width .4s; }
         .menu-toggle .bars { width: 28px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
@@ -213,11 +202,11 @@
         .site-menu.is-open .menu-item:nth-child(5) { transition-delay: .45s; }
         .site-menu.is-open .menu-item:nth-child(6) { transition-delay: .5s; }
 
-        /* ---------- Booking dialog ---------- */
+        /* Booking dialog */
         dialog.booking { padding: 0; border: 1px solid rgba(230,179,30,.35); background: #070707; color: var(--text-main);
             width: min(560px, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); border-radius: 4px; }
         dialog.booking::backdrop { background: rgba(0,0,0,.75); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-        /* The dialog renders in the top layer above the custom cursor, so show the real cursor there */
+
         dialog, dialog * { cursor: auto !important; }
         dialog input, dialog textarea { cursor: text !important; }
         dialog button, dialog select, dialog a { cursor: pointer !important; }
@@ -230,26 +219,3 @@
             html { scroll-behavior: auto !important; }
             *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
         }
-    
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00
-
-// Update log: session 7-12

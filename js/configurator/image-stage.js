@@ -1,18 +1,10 @@
-// Image configurator stage: shows pre-rendered views (made from the 3D model by tools/render_views.py),
-// like Tesla's configurator. Each picture is a stack of layers:
-//   base   = the car in one paint colour (transparent background, floor shadow included)
-//   wheels = glossy black rims overlay           (only when not standard)
-//   calipers = caliper colour overlay            (only when not standard)
-//   interior = leather colour overlay, cabin only (only when not standard)
-// Changing one option swaps one layer, so every other part stays exactly as it was.
-
 import { reducedMotion } from './animations.js';
 
-const ALIASES = { front: 'front34' };   // the 3D "front" view maps to the front ¾ picture here
-// Phones get 960x540 copies of every layer ("-sm"), about half the bytes. Same breakpoint as the preload in configure.html.
+const ALIASES = { front: 'front34' };
+
 const SMALL = window.matchMedia('(max-width: 600px)').matches;
 const decodeCache = new Map();
-const LOGO = Object.assign(new Image(), { src: 'assets/brand/aurelion-logo.svg' });   // signs saved pictures
+const LOGO = Object.assign(new Image(), { src: 'assets/brand/aurelion-logo.svg' });
 
 function loadImage(url) {
   if (!decodeCache.has(url)) {
@@ -35,21 +27,20 @@ export class ImageStage extends EventTarget {
     this.manifest = manifest;
     this.state = state;
     this.currentView = null;
-    this.order = manifest.order.filter((v) => v !== 'night');   // views reachable by swiping
+    this.order = manifest.order.filter((v) => v !== 'night');
     this.frame = null;
     this.token = 0;
     this.lights = false;
     this.attachGestures();
   }
 
-  // ---------- Layers ----------
+  // Layers
   viewState(view) {
     if (view === 'side') return this.state.preview.lifted ? 'raised' : 'lowered';
     if (view === 'rear34') return this.wingState || this.state.preview.wing || 'stowed';
     return 'default';
   }
 
-  /** The image URLs that make up a view for a build. Exported so tests can check part isolation. */
   layersFor(view, build = this.state.build, viewState = this.viewState(view)) {
     const d = this.manifest.defaults;
     const url = (layer) => this.manifest.path.replace('{view}', view).replace('{state}', viewState).replace('{layer}', layer)
@@ -61,7 +52,6 @@ export class ImageStage extends EventTarget {
     return layers;
   }
 
-  /** Builds the layer stack off-screen, waits until every image is decoded, then crossfades it in. */
   async show(view, { transition = 'fade', duration = 450, sweep = false } = {}) {
     const token = ++this.token;
     const layers = this.layersFor(view);
@@ -71,10 +61,10 @@ export class ImageStage extends EventTarget {
       images = await Promise.all(layers.map((l) => loadImage(l.url)));
     } catch (err) {
       if (token === this.token) this.container.classList.remove('is-busy');
-      this.dispatchEvent(new CustomEvent('error', { detail: err }));   // the page shows a short message
+      this.dispatchEvent(new CustomEvent('error', { detail: err }));
       return false;
     }
-    if (token !== this.token) return false;   // a newer change replaced this one
+    if (token !== this.token) return false;
     this.container.classList.remove('is-busy');
 
     const frame = document.createElement('div');
@@ -98,7 +88,7 @@ export class ImageStage extends EventTarget {
     frame.style.transitionDuration = instant ? '0ms' : `${duration}ms`;
     this.container.append(frame);
     this.frame = frame;
-    // Two frames so the starting styles apply before the transition runs.
+
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     frame.classList.add('is-in');
     if (old) {
@@ -120,8 +110,6 @@ export class ImageStage extends EventTarget {
     this.idlePreload();
   }
 
-  /** After the first picture, quietly fetch the other views of this build, then (not on phones) the other paints.
-   *  Skipped on Data Saver or a 2G connection: pictures then load only when they are asked for. */
   idlePreload() {
     const connection = navigator.connection || {};
     if (connection.saveData || /(^|-)2g$/.test(connection.effectiveType || '')) return;
@@ -138,7 +126,6 @@ export class ImageStage extends EventTarget {
     idle(next);
   }
 
-  // ---------- Same interface as the 3D viewer ----------
   goTo(name, { duration = 450 } = {}) {
     const view = ALIASES[name] || name;
     if (!this.manifest.views[view]) return Promise.resolve();
@@ -160,7 +147,6 @@ export class ImageStage extends EventTarget {
     return this.refresh({ duration: 700 });
   }
 
-  /** Steps through the in-between wing position so the change reads as motion. */
   async setWing(position) {
     const target = position.id;
     const steps = ['stowed', 'p4', 'p11'];
@@ -186,7 +172,6 @@ export class ImageStage extends EventTarget {
     return Promise.resolve();
   }
 
-  /** JPEG of the current picture for "Save image" (outside the artifact viewer). */
   snapshot() {
     const first = this.frame?.querySelector('img');
     const [w, h] = first?.naturalWidth ? [first.naturalWidth, first.naturalHeight] : this.manifest.size;
@@ -199,14 +184,13 @@ export class ImageStage extends EventTarget {
     g.fillStyle = grad;
     g.fillRect(0, 0, w, h);
     this.frame?.querySelectorAll('img').forEach((img) => g.drawImage(img, 0, 0, w, h));
-    if (LOGO.complete && LOGO.naturalWidth) {                     // AURELION mark in the bottom-left corner
+    if (LOGO.complete && LOGO.naturalWidth) {
       const lw = w * 0.16, lh = lw * LOGO.naturalHeight / LOGO.naturalWidth;
       g.globalAlpha = 0.9; g.drawImage(LOGO, w * 0.035, h - h * 0.05 - lh, lw, lh); g.globalAlpha = 1;
     }
     return c.toDataURL('image/jpeg', 0.92);
   }
 
-  // ---------- Swipe, drag and arrow keys change the view ----------
   step(dir) {
     const i = this.order.indexOf(this.currentView === 'night' ? 'front34' : this.currentView);
     const view = this.order[(i + dir + this.order.length) % this.order.length];
@@ -230,23 +214,3 @@ export class ImageStage extends EventTarget {
     });
   }
 }
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00

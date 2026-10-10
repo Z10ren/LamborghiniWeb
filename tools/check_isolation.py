@@ -1,13 +1,6 @@
-"""Checks that every configurator option changes only the parts it is meant to change.
+"""Checks that every option changes only its own part, in both configurators.
 
-3D page (configure-3d.html): for each option, records every material (colour, finish, emission) and every
-moving group (body, wing, wheels, doors), applies the option, and fails if anything outside its own part changed.
-Picture page (configure.html): for each option and every view, fails if any layer other than that option's own
-layer changes, or if a picture file it needs is missing.
-
-Usage (from the project folder):
-    pip install playwright && python -m playwright install chromium
-    python tools/check_isolation.py
+Usage: python tools/check_isolation.py
 """
 import json, os, subprocess, sys, time
 from playwright.sync_api import sync_playwright
@@ -83,7 +76,7 @@ try:
     with sync_playwright() as p:
         browser = p.chromium.launch(args=['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
         page = browser.new_page(viewport={'width': 960, 'height': 600}, reduced_motion='reduce')
-        page.route('https://fonts.*/**', lambda r: r.abort())   # fonts don't matter here; don't wait on them
+        page.route('https://fonts.*/**', lambda r: r.abort())
         page.goto(f'http://127.0.0.1:{PORT}/configure-3d.html?stills', wait_until='domcontentloaded')
         page.wait_for_function('window.__configurator && window.__configurator.ready', timeout=180000)
         report = page.evaluate(PROBE)
@@ -103,7 +96,6 @@ for r in pic_failed:
     print(f"FAIL  {r['view']:<16} {r['group']}/{r['option']}  stray layers: {r['stray']}")
 if picture_report['missing']:
     print(f"MISSING {len(picture_report['missing'])} picture files, e.g. {picture_report['missing'][:3]}")
-# Phones load a 960 px copy of every layer (tools/optimize_assets.py makes them).
 import glob
 views_dir = os.path.join(ROOT, 'assets', 'views')
 no_small = [f for f in glob.glob(os.path.join(views_dir, '*.webp')) if not f.endswith('-sm.webp') and not os.path.exists(f[:-5] + '-sm.webp')]
@@ -116,23 +108,3 @@ for r in report:
           + (f"  STRAY: {r['stray']}" if r['stray'] else '') + (f"  NODES: {r['changedNodes']}" if r['changedNodes'] else ''))
 print(f"\n{len(report) - len(failed)} of {len(report)} options change only their own parts.")
 sys.exit(1 if failed or pic_failed or picture_report['missing'] or no_small else 0)
-
-# Automated touch for Day 1: 2026-10-01T10:00:00
-
-# Automated touch for Day 2: 2026-10-02T10:00:00
-
-# Automated touch for Day 3: 2026-10-03T10:00:00
-
-# Automated touch for Day 4: 2026-10-04T10:00:00
-
-# Automated touch for Day 5: 2026-10-05T10:00:00
-
-# Automated touch for Day 6: 2026-10-06T10:00:00
-
-# Automated touch for Day 7: 2026-10-07T10:00:00
-
-# Automated touch for Day 8: 2026-10-08T10:00:00
-
-# Automated touch for Day 9: 2026-10-09T10:00:00
-
-# Automated touch for Day 10: 2026-10-10T10:00:00
